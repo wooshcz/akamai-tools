@@ -5,8 +5,10 @@ Bash script that is able to extract the currently used Edge Servers IP addresses
 
 ### Usage
 
+```
    $ ./staging-cli.sh
    Usage: ./staging-cli.sh [ apply | build | init | clean | reset ]
+```
 
 * apply - applies the already built IP-Host entries into the main /etc/hosts. This needs to be run as sudo.
 * build - this takes the configuration file with the hostnames and builds the IP-Host mapping. This needs to be run first before the apply action can be used.
@@ -16,11 +18,13 @@ Bash script that is able to extract the currently used Edge Servers IP addresses
 
 ### Typical examples
 
+```
    $ ./staging-cli.sh init # initialize the tool
    $ vim ./staging-hostnames-list.txt # edit the list hostnames manually
    $ ./staging-cli.sh build # build the IP-Host mapping
    $ sudo ./staging-cli.sh apply # apply the built mapping into /etc/hosts
    $ sudo ./staging-cli.sh reset # revert the /etc/hosts into the default state
    $ ./staging-cli.sh clean # clear the built IP-Host mapping from disk
+```
 
 
