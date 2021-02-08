@@ -5,6 +5,7 @@ HOSTNAMES_LIST_FILE=${BASE_PATH}/staging-hostnames-list.txt
 HOSTNAMES_LIST=`grep -v -E "^#(.*)" ${HOSTNAMES_LIST_FILE}`
 BUILD_HOSTS_FILE=${BASE_PATH}/hosts.staging
 DEFAULT_HOSTS_FILE=${BASE_PATH}/hosts.default
+STATIC_HOSTS_FILE=${BASE_PATH}/staging-static-config.txt
 
 # Print a usage message.
 usage() {
@@ -18,8 +19,13 @@ fi
 
 apply() {
   echo "Applying the built configuration ..."
+  if [[ -f ${STATIC_HOSTS_FILE} ]]; then
+    cat ${STATIC_HOSTS_FILE} >> /etc/hosts
+    echo "Adding the static configuration into /etc/hosts"
+  fi
   if [[ -f ${BUILD_HOSTS_FILE} ]]; then
     cat ${BUILD_HOSTS_FILE} >> /etc/hosts
+    echo "Adding the built hosts into /etc/hosts"
   else
     echo "No configuration has been built yet, you might want to run '$0 build' first"
     exit 1
