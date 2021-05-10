@@ -3,6 +3,11 @@
 ## staging-cli.sh
 Bash script that is able to extract the currently used Edge Servers IP addresses for Akamai-hosted domains and apply these IPs into the /etc/hosts file to route the local traffic to Akamai Staging network. This is useful to test changes on Akamai Staging before deploying to production.
 
+### Requirements
+* jq - Command-line JSON processor
+* bash - GNU Bourne-Again SHell
+* dig - DNS lookup utility
+
 ### Usage
 
 ```
