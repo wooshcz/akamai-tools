@@ -6,6 +6,7 @@ HOSTNAMES_LIST=`grep -v -E "^#(.*)" ${HOSTNAMES_LIST_FILE}`
 BUILD_HOSTS_FILE=${BASE_PATH}/hosts.staging
 DEFAULT_HOSTS_FILE=${BASE_PATH}/hosts.default
 STATIC_HOSTS_FILE=${BASE_PATH}/staging-static-config.txt
+DEBUG_FLAG=false
 
 # Print a usage message.
 usage() {
@@ -16,6 +17,14 @@ if [[ ${BASH_ARGC} -ne 1 ]]; then
   usage
   exit 1
 fi
+
+digjson() {
+  digjson=$( dig $hostname +nocomments +noquestion +noauthority +noadditional +nostats  | awk '{if (NR>3) { print }}' | tr '\t' ' ' | tr -s ' ' | jq -R 'split(" ")|{Name:.[0],TTL:.[1],Class:.[2],Type:.[3],IpAddress:.[4]}' | jq --slurp . )
+  diglen=$( echo $digjson | jq length )
+  if [[ "$DEBUG_FLAG" == "true" ]]; then
+    echo "[DEBUG] $digjson"
+  fi
+}
 
 apply() {
   echo "Applying the built configuration ..."
@@ -62,10 +71,41 @@ build() {
     ((CNTR++))
     echo -n "${CNTR}/${ARR_LEN} | Processing ${hostname}"
     hostname=`echo ${hostname} | tr -d '[:space:]'`
-    DIG_CNAME=`dig ${hostname} +short | grep -E "\.(edgekey|edgesuite)\.net\.$"`;
-    if [[ ${#DIG_CNAME} -gt 0 ]]; then
+    DIG_EDGEKEY=""
+    DIG_AKADNS=""
+    DIG_EDGE=""
+    digjson
+    i=0
+    while [[ $i -lt $diglen ]] ; do
+      digline=$( echo $digjson | jq .[$i] )
+      IS_EDGEKEY=`echo ${digline} | jq .IpAddress | tr -d '"' | grep -E "\.(edgekey|edgesuite)\.net\.$"`;
+      IS_AKADNS=`echo ${digline} | jq .IpAddress | tr -d '"' | grep -E "\.globalredir\.akadns.net\.$"`;
+      IS_EDGE=`echo ${digline} | jq .IpAddress | tr -d '"' | grep -E "\.akamaiedge\.net\.$"`;
+      if [[ ${#IS_EDGEKEY} -gt 0 ]]; then
+        DIG_EDGEKEY=$IS_EDGEKEY
+      fi
+      if [[ ${#IS_AKADNS} -gt 0 ]]; then
+        DIG_AKADNS=$IS_AKADNS
+      fi
+      if [[ ${#IS_EDGE} -gt 0 ]]; then
+        DIG_EDGE=$IS_EDGE
+      fi
+      (( i += 1 ))
+    done
+
+    if [[ "$DEBUG_FLAG" == "true" ]]; then
+      echo "[DEBUG] Edgekey: $DIG_EDGEKEY, Akadns: $DIG_AKADNS, Edge: $DIG_EDGE"
+    fi
+
+    if [[ ${#DIG_EDGEKEY} -gt 0 ]] && [[ ${#DIG_AKADNS} -gt 0 ]] && [[ ${#DIG_EDGE} -gt 0 ]]; then
+      echo -n -e " | is hosted on Akamai with Akadns"
+      STAGING_CNAME=`echo ${DIG_EDGE} | sed -E 's/(akamaiedge)\.net/\1-staging\.net/'`;
+      STAGING_IP_OUT=`dig ${STAGING_CNAME} +short | tail -1`;
+      echo -n -e " | staging IP address: ${STAGING_IP_OUT}"
+      echo -e "${STAGING_IP_OUT}\t${hostname}" >> ${BUILD_HOSTS_FILE}
+    elif [[ ${#DIG_EDGEKEY} -gt 0 ]] ; then
       echo -n -e " | is hosted on Akamai"
-      STAGING_CNAME=`echo ${DIG_CNAME} | sed -E 's/(edgekey|edgesuite)\.net/\1-staging\.net/'`;
+      STAGING_CNAME=`echo ${DIG_EDGEKEY} | sed -E 's/(edgekey|edgesuite)\.net/\1-staging\.net/'`;
       STAGING_IP_OUT=`dig ${STAGING_CNAME} +short | tail -1`;
       echo -n -e " | staging IP address: ${STAGING_IP_OUT}"
       echo -e "${STAGING_IP_OUT}\t${hostname}" >> ${BUILD_HOSTS_FILE}
