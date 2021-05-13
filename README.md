@@ -8,6 +8,12 @@ Bash script that is able to extract the currently used Edge Servers IP addresses
 * bash - GNU Bourne-Again SHell
 * dig - DNS lookup utility
 
+## staging-cli.py
+Python flavor of the above ...
+
+### Requirements
+* python3
+
 ### Usage
 
 ```
